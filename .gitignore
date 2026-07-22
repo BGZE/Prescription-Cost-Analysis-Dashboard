@@ -1,0 +1,29 @@
+# Secrets / environment
+.env
+.env.local
+*.env
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+
+# Data caches (raw CSVs are large; never commit them)
+data/raw/*.csv
+data/raw_cache/
+*.csv
+
+# OS
+.DS_Store
+
+# TS build cache
+frontend/*.tsbuildinfo

@@ -1,0 +1,39 @@
+name: Refresh PCA data
+
+# The NHSBSA publishes each new month mid-month. We run on the 20th (and allow
+# manual runs). The pipeline is incremental: it only loads months not already
+# in the warehouse, so re-runs are cheap and safe.
+on:
+  schedule:
+    - cron: "0 6 20 * *"
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: "Reload the newest N months (leave blank for incremental)"
+        required: false
+        default: ""
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ETL dependencies
+        run: pip install -r etl/requirements.txt
+
+      - name: Run pipeline
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "${{ github.event.inputs.backfill }}" ]; then
+            python -m etl.pipeline --backfill "${{ github.event.inputs.backfill }}"
+          else
+            python -m etl.pipeline
+          fi

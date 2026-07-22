@@ -1,0 +1,20 @@
+# Render Blueprint — deploys the dashboard as one free Docker web service.
+# Point Render at this repo (New + Blueprint) and it reads this file.
+#
+# You must set DATABASE_URL in the Render dashboard to your Supabase Postgres
+# connection string (use the connection *pooler* URI, port 6543). It is marked
+# sync:false so it is never committed — you paste it once in the UI.
+
+services:
+  - type: web
+    name: pca-dashboard
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"

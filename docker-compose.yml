@@ -1,0 +1,24 @@
+# Local development: a Postgres instance for the ETL + backend to talk to.
+# Start with:  docker compose up -d
+# Then point DATABASE_URL at it (see .env.example).
+
+services:
+  db:
+    image: postgres:16
+    container_name: pca-postgres
+    environment:
+      POSTGRES_USER: pca
+      POSTGRES_PASSWORD: pca
+      POSTGRES_DB: pca
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pca"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
