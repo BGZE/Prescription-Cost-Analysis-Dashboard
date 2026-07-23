@@ -19,6 +19,7 @@ export default function App() {
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [trendMonths, setTrendMonths] = useState<number>(0); // 0 = all months
   const [therapeutic, setTherapeutic] = useState<Breakdown[]>([]);
   const [thLevel, setThLevel] = useState<"chapter" | "section">("chapter");
   const [geo, setGeo] = useState<Breakdown[]>([]);
@@ -114,9 +115,13 @@ export default function App() {
         <div className="panel col-8">
           <div className="panel-head">
             <h2>Monthly spend &amp; cost per item</h2>
-            <span className="sub">Net ingredient cost (bars) vs cost per item (line)</span>
+            <div className="toggle">
+              <button className={trendMonths === 6 ? "active" : ""} onClick={() => setTrendMonths(6)}>6M</button>
+              <button className={trendMonths === 12 ? "active" : ""} onClick={() => setTrendMonths(12)}>12M</button>
+              <button className={trendMonths === 0 ? "active" : ""} onClick={() => setTrendMonths(0)}>All</button>
+            </div>
           </div>
-          <TrendChart data={trend} />
+          <TrendChart data={trendMonths > 0 ? trend.slice(-trendMonths) : trend} />
         </div>
 
         <div className="panel col-4">
