@@ -1,5 +1,7 @@
 # NHS Prescription Cost Analysis Dashboard
 
+### 🔗 [**Live dashboard →**](https://pca-dashboard-l843.onrender.com/)
+
 A full, live data product built on the **NHSBSA Prescription Cost Analysis (PCA)**
 open dataset. It runs the whole pipeline end to end:
 
