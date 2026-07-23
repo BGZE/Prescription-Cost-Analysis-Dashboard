@@ -42,6 +42,12 @@ export interface PrepClass {
 }
 export interface PrepBreakdown { groups: PrepGroup[]; classes: PrepClass[]; }
 
+export interface Substance { code: string; name: string; }
+export interface DrugTrendPoint {
+  year_month: number; label: string; name: string;
+  nic: number; items: number; cost_per_item: number;
+}
+
 const BASE = import.meta.env.VITE_API_BASE || "";
 
 async function get<T>(path: string): Promise<T> {
@@ -60,4 +66,6 @@ export const api = {
     get<Breakdown[]>(`/api/geography?month=${month}&level=${level}`),
   drugs: (month: string, limit = 15) => get<Drug[]>(`/api/drugs?month=${month}&limit=${limit}`),
   prepclass: (month: string) => get<PrepBreakdown>(`/api/prepclass?month=${month}`),
+  substances: () => get<Substance[]>("/api/substances"),
+  drugTrend: (code: string) => get<DrugTrendPoint[]>(`/api/drugs/${code}/trend`),
 };

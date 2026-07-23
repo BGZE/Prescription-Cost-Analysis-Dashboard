@@ -82,6 +82,11 @@ def get_drugs(month: str | None = None, limit: int = Query(20, ge=1, le=100)):
     return queries.top_drugs(_require_month(month), limit)
 
 
+@app.get("/api/substances")
+def get_substances():
+    return queries.substances()
+
+
 @app.get("/api/drugs/{code}/trend")
 def get_drug_trend(code: str):
     rows = queries.drug_trend(code)

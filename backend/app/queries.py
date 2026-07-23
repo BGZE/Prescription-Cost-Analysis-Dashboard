@@ -181,7 +181,18 @@ def drug_trend(code: str) -> list[dict]:
     for r in rows:
         r["label"] = _label(r["year_month"])
         r["nic"] = float(r["nic"])
+        r["cost_per_item"] = round(r["nic"] / r["items"], 4) if r["items"] else 0
     return rows
+
+
+def substances() -> list[dict]:
+    """Distinct chemical substances across all months, for the search box."""
+    return fetch_all(
+        "SELECT bnf_chemical_substance_code AS code, bnf_chemical_substance AS name "
+        "FROM fact_chemical_month WHERE bnf_chemical_substance IS NOT NULL "
+        "GROUP BY bnf_chemical_substance_code, bnf_chemical_substance "
+        "ORDER BY bnf_chemical_substance"
+    )
 
 
 # ---------------------------------------------------------------------------

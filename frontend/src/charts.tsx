@@ -1,9 +1,9 @@
 import {
   Area,
+  AreaChart,
   Bar,
   BarChart,
   Cell,
-  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -12,9 +12,8 @@ import {
   YAxis,
   CartesianGrid,
   Legend,
-  ComposedChart,
 } from "recharts";
-import type { Breakdown, PrepGroup, TrendPoint } from "./api";
+import type { Breakdown, DrugTrendPoint, PrepGroup, TrendPoint } from "./api";
 import { gbp, gbpCompact, gbpPrecise, numCompact } from "./format";
 
 const AXIS = { stroke: "#3a4d73", fontSize: 11 };
@@ -24,58 +23,73 @@ const BAR_COLORS = [
   "#ef6461", "#9b8cff", "#4dd0a7", "#f19066", "#5aa9e6",
 ];
 
-export function TrendChart({ data }: { data: TrendPoint[] }) {
+export type TrendMetric = "nic" | "items" | "cost_per_item";
+
+const METRIC_CFG: Record<
+  TrendMetric,
+  { label: string; color: string; axis: (v: number) => string; tip: (v: number) => string }
+> = {
+  nic: { label: "Net ingredient cost", color: "#2f80ed", axis: gbpCompact, tip: gbp },
+  items: { label: "Prescription items", color: "#27c093", axis: numCompact, tip: numCompact },
+  cost_per_item: {
+    label: "Cost per item",
+    color: "#f2c14e",
+    axis: (v) => `£${v.toFixed(2)}`,
+    tip: gbpPrecise,
+  },
+};
+
+export function TrendChart({ data, metric }: { data: TrendPoint[]; metric: TrendMetric }) {
+  const cfg = METRIC_CFG[metric];
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <ComposedChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
         <defs>
-          <linearGradient id="nicFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2f80ed" stopOpacity={0.45} />
-            <stop offset="100%" stopColor="#2f80ed" stopOpacity={0.02} />
+          <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={cfg.color} stopOpacity={0.45} />
+            <stop offset="100%" stopColor={cfg.color} stopOpacity={0.02} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
-        <YAxis
-          yAxisId="l"
-          tick={AXIS}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => gbpCompact(v)}
-        />
-        <YAxis
-          yAxisId="r"
-          orientation="right"
-          tick={AXIS}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => `£${v.toFixed(1)}`}
-        />
-        <Tooltip
-          formatter={(v: number, name: string) =>
-            name === "Cost / item" ? gbpPrecise(v) : gbp(v)
-          }
-        />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <YAxis tick={AXIS} tickLine={false} axisLine={false} tickFormatter={cfg.axis} width={64} />
+        <Tooltip formatter={(v: number) => [cfg.tip(v), cfg.label]} />
         <Area
-          yAxisId="l"
+          type="monotone"
+          dataKey={metric}
+          name={cfg.label}
+          stroke={cfg.color}
+          strokeWidth={2}
+          fill="url(#trendFill)"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function DrugTrendChart({ data }: { data: DrugTrendPoint[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+        <defs>
+          <linearGradient id="drugFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#9b8cff" stopOpacity={0.45} />
+            <stop offset="100%" stopColor="#9b8cff" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke={GRID} vertical={false} />
+        <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={{ stroke: GRID }} />
+        <YAxis tick={AXIS} tickLine={false} axisLine={false} tickFormatter={gbpCompact} width={64} />
+        <Tooltip formatter={(v: number) => [gbp(v), "Net ingredient cost"]} />
+        <Area
           type="monotone"
           dataKey="nic"
           name="Net ingredient cost"
-          stroke="#2f80ed"
+          stroke="#9b8cff"
           strokeWidth={2}
-          fill="url(#nicFill)"
+          fill="url(#drugFill)"
         />
-        <Line
-          yAxisId="r"
-          type="monotone"
-          dataKey="cost_per_item"
-          name="Cost / item"
-          stroke="#f2c14e"
-          strokeWidth={2}
-          dot={false}
-        />
-      </ComposedChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

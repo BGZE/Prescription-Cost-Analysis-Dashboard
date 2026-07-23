@@ -3,13 +3,15 @@ import {
   api,
   type Breakdown,
   type Drug,
+  type DrugTrendPoint,
   type Kpi,
   type Meta,
   type Overview,
   type PrepBreakdown,
+  type Substance,
   type TrendPoint,
 } from "./api";
-import { BreakdownBars, PrepDonut, TrendChart } from "./charts";
+import { BreakdownBars, DrugTrendChart, PrepDonut, TrendChart, type TrendMetric } from "./charts";
 import { gbp, gbpCompact, gbpPrecise, monthName, numCompact, pct } from "./format";
 
 export default function App() {
@@ -20,6 +22,13 @@ export default function App() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
   const [trendMonths, setTrendMonths] = useState<number>(0); // 0 = all months
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>("nic");
+
+  // Drug explorer
+  const [substances, setSubstances] = useState<Substance[]>([]);
+  const [drugQuery, setDrugQuery] = useState<string>("");
+  const [drugTrend, setDrugTrend] = useState<DrugTrendPoint[]>([]);
+  const [drugMonths, setDrugMonths] = useState<number>(0);
   const [therapeutic, setTherapeutic] = useState<Breakdown[]>([]);
   const [thLevel, setThLevel] = useState<"chapter" | "section">("chapter");
   const [geo, setGeo] = useState<Breakdown[]>([]);
@@ -34,7 +43,26 @@ export default function App() {
       if (m.latest_month) setMonth(String(m.latest_month));
     }).catch((e) => setError(String(e)));
     api.trend().then(setTrend).catch((e) => setError(String(e)));
+    api.substances().then(setSubstances).catch((e) => setError(String(e)));
   }, []);
+
+  // Seed the drug explorer with the current top drug once data is available.
+  useEffect(() => {
+    if (!drugQuery && drugs.length) selectDrug(drugs[0].code, drugs[0].name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drugs]);
+
+  function selectDrug(code: string, name: string) {
+    setDrugQuery(name);
+    api.drugTrend(code).then(setDrugTrend).catch((e) => setError(String(e)));
+  }
+
+  // When the user picks a name from the datalist, look up its code and load it.
+  function onDrugInput(value: string) {
+    setDrugQuery(value);
+    const match = substances.find((s) => s.name === value);
+    if (match) selectDrug(match.code, match.name);
+  }
 
   // Reload month-scoped data whenever the month changes.
   useEffect(() => {
@@ -114,14 +142,21 @@ export default function App() {
       <div className="grid">
         <div className="panel col-8">
           <div className="panel-head">
-            <h2>Monthly spend &amp; cost per item</h2>
-            <div className="toggle">
-              <button className={trendMonths === 6 ? "active" : ""} onClick={() => setTrendMonths(6)}>6M</button>
-              <button className={trendMonths === 12 ? "active" : ""} onClick={() => setTrendMonths(12)}>12M</button>
-              <button className={trendMonths === 0 ? "active" : ""} onClick={() => setTrendMonths(0)}>All</button>
+            <h2>Monthly trend</h2>
+            <div className="toggle-row">
+              <div className="toggle">
+                <button className={trendMetric === "nic" ? "active" : ""} onClick={() => setTrendMetric("nic")}>Cost</button>
+                <button className={trendMetric === "items" ? "active" : ""} onClick={() => setTrendMetric("items")}>Items</button>
+                <button className={trendMetric === "cost_per_item" ? "active" : ""} onClick={() => setTrendMetric("cost_per_item")}>Cost/item</button>
+              </div>
+              <div className="toggle">
+                <button className={trendMonths === 6 ? "active" : ""} onClick={() => setTrendMonths(6)}>6M</button>
+                <button className={trendMonths === 12 ? "active" : ""} onClick={() => setTrendMonths(12)}>12M</button>
+                <button className={trendMonths === 0 ? "active" : ""} onClick={() => setTrendMonths(0)}>All</button>
+              </div>
             </div>
           </div>
-          <TrendChart data={trendMonths > 0 ? trend.slice(-trendMonths) : trend} />
+          <TrendChart data={trendMonths > 0 ? trend.slice(-trendMonths) : trend} metric={trendMetric} />
         </div>
 
         <div className="panel col-4">
@@ -162,9 +197,48 @@ export default function App() {
         <div className="panel col-12">
           <div className="panel-head">
             <h2>Top drugs by cost</h2>
-            <span className="sub">BNF chemical substance · {monthName(activeYm)}</span>
+            <span className="sub">BNF chemical substance · {monthName(activeYm)} · click a row to explore</span>
           </div>
-          <DrugsTable drugs={drugs} />
+          <DrugsTable drugs={drugs} onSelect={selectDrug} />
+        </div>
+
+        <div className="panel col-12">
+          <div className="panel-head">
+            <h2>Drug explorer</h2>
+            <div className="toggle-row">
+              <input
+                className="search"
+                list="substances"
+                placeholder="Search a chemical substance…"
+                value={drugQuery}
+                onChange={(e) => onDrugInput(e.target.value)}
+              />
+              <datalist id="substances">
+                {substances.map((s) => (
+                  <option key={s.code} value={s.name} />
+                ))}
+              </datalist>
+              <div className="toggle">
+                <button className={drugMonths === 6 ? "active" : ""} onClick={() => setDrugMonths(6)}>6M</button>
+                <button className={drugMonths === 12 ? "active" : ""} onClick={() => setDrugMonths(12)}>12M</button>
+                <button className={drugMonths === 0 ? "active" : ""} onClick={() => setDrugMonths(0)}>All</button>
+              </div>
+            </div>
+          </div>
+          {drugTrend.length ? (
+            <>
+              <div className="muted" style={{ marginBottom: 8 }}>
+                <strong style={{ color: "var(--text)" }}>{drugTrend[drugTrend.length - 1].name}</strong>
+                {" · "}
+                {monthName(drugTrend[drugTrend.length - 1].year_month)}:{" "}
+                {gbp(drugTrend[drugTrend.length - 1].nic)} across{" "}
+                {numCompact(drugTrend[drugTrend.length - 1].items)} items
+              </div>
+              <DrugTrendChart data={drugMonths > 0 ? drugTrend.slice(-drugMonths) : drugTrend} />
+            </>
+          ) : (
+            <div className="muted">Search for a drug, or click a row above, to see its cost over time.</div>
+          )}
         </div>
       </div>
 
@@ -209,7 +283,7 @@ function Delta({ label, value, invert }: { label: string; value: number | null; 
   );
 }
 
-function DrugsTable({ drugs }: { drugs: Drug[] }) {
+function DrugsTable({ drugs, onSelect }: { drugs: Drug[]; onSelect: (code: string, name: string) => void }) {
   return (
     <div style={{ overflowX: "auto" }}>
       <table className="table">
@@ -225,7 +299,7 @@ function DrugsTable({ drugs }: { drugs: Drug[] }) {
         </thead>
         <tbody>
           {drugs.map((d, i) => (
-            <tr key={d.code}>
+            <tr key={d.code} className="clickable" onClick={() => onSelect(d.code, d.name)}>
               <td className="rank">{i + 1}</td>
               <td>{d.name}</td>
               <td><span className="chip">{d.chapter}</span></td>
